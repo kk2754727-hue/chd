@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Community Helper Directory</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'] } } } };
+  </script>
+  <style>
+    body { background:#f7fafc; font-family:'Inter',sans-serif; }
+    .card { background:#fff; border-radius:1rem; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -2px rgba(0,0,0,0.05); }
+    .helper-item:hover { background:#f0f4f8; transform:scale(1.01); }
+    input, select, textarea { padding:.6rem; border:1px solid #e2e8f0; border-radius:.5rem; }
+    input:focus, select:focus, textarea:focus { border-color:#3b82f6; outline:none; box-shadow:0 0 0 2px rgba(59,130,246,0.12); }
+    .modal-backdrop { background:rgba(0,0,0,0.5); }
+  </style>
+</head>
+<body>
+  <div id="app" class="min-h-screen p-6 flex flex-col items-center">
+    <header class="text-center w-full max-w-5xl mb-6">
+      <h1 class="text-4xl font-extrabold text-blue-800">Community Helper Hub</h1>
+      <p class="text-gray-600 mt-1">Find local professionals and share ratings & feedback.</p>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="w-full max-w-5xl mb-6 flex gap-2 bg-white p-2 rounded-xl shadow-sm">
+      <button id="tab-directory" onclick="switchView('directory')" class="w-1/2 py-2 rounded-lg text-gray-700 font-medium hover:bg-gray-100">
+        Directory / Search
+      </button>
+      <button id="tab-register" onclick="switchView('register')" class="w-1/2 py-2 rounded-lg bg-blue-50 text-blue-800 font-semibold">
+        Register Service
+      </button>
+    </nav>
+
+    <!-- REGISTER VIEW -->
+    <main id="register-view" class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Info card -->
+      <section class="card p-6 border border-gray-200">
+        <h2 class="text-2xl font-bold mb-3 text-gray-700">Register Your Service</h2>
+        <p class="text-gray-600">
+          Use this form to register your professional service. Once registered, your information and rating will appear in the Directory.
+        </p>
+        <div id="status-box" class="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-700 hidden"></div>
+      </section>
+
+      <!-- Form -->
+      <section class="card p-6 border border-blue-200">
+        <h2 class="text-2xl font-bold mb-3 text-blue-700">Become a Helper</h2>
+        <form id="registration-form" class="space-y-3">
+          <input type="text" id="name" placeholder="Your Name" class="w-full" required />
+          <input type="text" id="contact" placeholder="Contact (Phone / Email)" class="w-full" required />
+          <div>
+            <select id="location" class="w-full" required>
+              <option value="" disabled selected>Select Your Location</option>
+              <option>Allalasandra</option><option>Attur Layout</option><option>Chowdeshwari Layout</option>
+              <option>Puttenahalli</option><option>Judicial Layout</option><option>Yelahanka NES</option>
+              <option>Kogilu</option><option>Agrahara Layout</option><option>Nehru Nagar</option>
+              <option>Nitte Meenakshi College area (NMIT Road)</option><option>Kattigenahalli</option>
+              <option>Bagalur Road</option><option>Yelahanka Satellite Town</option><option value="Other">Other</option>
+            </select>
+            <input type="text" id="other-location" placeholder="Specify other location" class="w-full mt-2 hidden" />
+          </div>
+          <input type="number" id="cost" placeholder="Cost per Day (INR)" class="w-full" min="0" />
+          <div>
+            <select id="profession" class="w-full" required>
+              <option value="" disabled selected>Select Your Profession</option>
+              <option>Carpenter</option><option>Electrician</option><option>Plumber</option>
+              <option>Painter</option><option>House Cleaner</option><option>Locksmith</option>
+              <option>Gardener</option><option>Handyman</option><option value="Other">Other</option>
+            </select>
+            <input type="text" id="other-profession" placeholder="Specify other profession" class="w-full mt-2 hidden" />
+          </div>
+          <button id="register-button" class="w-full bg-green-500 text-white py-3 rounded-xl hover:bg-green-600">
+            Register My Service
+          </button>
+          <div id="message-box" class="mt-2 text-sm text-center"></div>
+        </form>
+      </section>
+    </main>
+
+    <!-- DIRECTORY VIEW -->
+    <section id="directory-view" class="w-full max-w-5xl mt-6 hidden">
+      <div class="card p-6 border border-gray-200">
+        <h2 class="text-2xl font-bold mb-3 text-gray-700">Search for Helpers</h2>
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+          <input id="search-profession" placeholder="Profession (e.g., Electrician)" class="w-full sm:w-1/2" />
+          <input id="search-location" placeholder="Location (City, Area)" class="w-full sm:w-1/2" />
+          <div class="flex gap-2">
+            <button onclick="searchHelpers()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Search</button>
+            <button onclick="clearSearch()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Clear</button>
+          </div>
+        </div>
+        <div id="helpers-list" class="space-y-4">
+          <p id="loading-indicator" class="text-gray-500 text-center">Loading helpers…</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Rating Modal -->
+  <div id="rating-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
+      <h3 id="rating-modal-title" class="text-xl font-bold mb-3">Rate Helper</h3>
+      <form id="rating-form" class="space-y-3">
+        <input type="hidden" id="modal-helper-id">
+        <label class="block text-sm font-medium">Rating (1–5)</label>
+        <input id="rating-input" type="number" min="1" max="5" value="5" required class="w-full text-center text-xl" />
+        <label class="block text-sm font-medium">Feedback (optional)</label>
+        <textarea id="feedback-input" rows="4" class="w-full"></textarea>
+        <div class="flex gap-3">
+          <button type="button" onclick="closeRatingModal()" class="w-1/2 py-2 bg-gray-300 rounded-lg">Cancel</button>
+          <button type="submit" id="rating-submit" class="w-1/2 py-2 bg-yellow-500 text-white rounded-lg">Submit Rating</button>
+        </div>
+        <div id="rating-message" class="text-sm text-center mt-2"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div id="feedback-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop">
+    <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
+      <h3 id="feedback-modal-title" class="text-xl font-bold mb-4">Feedback</h3>
+      <div id="feedback-list" class="space-y-3 mb-4">
+        <!-- feedback items injected here -->
+      </div>
+      <div class="text-right">
+        <button onclick="closeFeedbackModal()" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+  import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    onSnapshot,
+    query,
+    serverTimestamp,
+    updateDoc,
+    doc,
+    getDocs,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+  // Firebase config
+  const appId = "communityhelperdirectory-2b7eb";
+  const firebaseConfig = {
+    apiKey: "AIzaSyCmpzSWtzmFA4RHhdF_6bfUWoq7EydFmrM",
+    authDomain: "communityhelperdirectory-2b7eb.firebaseapp.com",
+    projectId: "communityhelperdirectory-2b7eb",
+    storageBucket: "communityhelperdirectory-2b7eb.appspot.com",
+    messagingSenderId: "790213248739",
+    appId: "1:790213248739:web:ae8b6f8ec2d21010b7e7d6"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  let userId = null;
+  let allHelpers = [];
+  let unsubscribeHelpers = null;
+
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+  // ---------- View switching ----------
+  function switchView(name){
+    document.getElementById('register-view').style.display = (name === 'register') ? 'grid' : 'none';
+    document.getElementById('directory-view').style.display = (name === 'directory') ? 'block' : 'none';
+    document.getElementById('tab-register').classList.toggle('bg-blue-50', name==='register');
+    document.getElementById('tab-register').classList.toggle('text-blue-800', name==='register');
+    document.getElementById('tab-directory').classList.toggle('bg-blue-50', name==='directory');
+    document.getElementById('tab-directory').classList.toggle('text-blue-800', name==='directory');
+    if (name === 'directory' && db) listenForHelpers(true);
+  }
+  window.switchView = switchView;
+
+  // ---------- Auth ----------
+  signInAnonymously(auth).catch(err => console.warn("Anon sign-in error:", err));
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      userId = user.uid;
+      listenForHelpers();
+    }
+  });
+
+  // ---------- Registration ----------
+  const professionSelect = document.getElementById('profession');
+  const otherProfessionInput = document.getElementById('other-profession');
+  professionSelect.addEventListener('change', () => {
+    if (professionSelect.value === 'Other') {
+      otherProfessionInput.classList.remove('hidden');
+      otherProfessionInput.required = true;
+    } else {
+      otherProfessionInput.classList.add('hidden');
+      otherProfessionInput.required = false;
+    }
+  });
+
+  document.getElementById('registration-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('message-box');
+    msg.textContent = '';
+
+    const name = document.getElementById('name').value.trim();
+    const contact = document.getElementById('contact').value.trim();
+    const location = document.getElementById('location').value.trim();
+    const cost = Number(document.getElementById('cost').value || 0);
+    let profession = professionSelect.value;
+    if (profession === 'Other') profession = otherProfessionInput.value.trim() || 'Unspecified';
+
+    if (!name || !contact || !location) {
+      msg.textContent = "Please fill all required fields.";
+      msg.className = "text-red-600";
+      return;
+    }
+
+    try {
+      const path = `/artifacts/${appId}/public/data/helpers`;
+      await addDoc(collection(db, path), {
+        name, contact, location, profession, cost, userId,
+        rating: 0, ratingCount: 0, registeredAt: serverTimestamp()
+      });
+      e.target.reset();
+      otherProfessionInput.classList.add('hidden');
+      msg.textContent = "✅ Registered successfully.";
+      msg.className = "text-green-600";
+    } catch (err) {
+      console.error("Registration error:", err);
+      msg.textContent = "❌ Registration failed. See console.";
+      msg.className = "text-red-600";
+    }
+  });
+
+  // ---------- Real-time helpers ----------
+  function listenForHelpers(forceRefresh=false){
+    if (unsubscribeHelpers && !forceRefresh) return;
+    if (unsubscribeHelpers) unsubscribeHelpers();
+
+    const path = `/artifacts/${appId}/public/data/helpers`;
+    const q = query(collection(db, path));
+    unsubscribeHelpers = onSnapshot(q, snap => {
+      allHelpers = [];
+      snap.forEach(d => allHelpers.push({ id: d.id, ...d.data() }));
+      allHelpers.sort((a,b) => (b.registeredAt?.toMillis?.()||0) - (a.registeredAt?.toMillis?.()||0));
+      searchHelpers();
+    }, err => {
+      console.error("listenForHelpers error:", err);
+      const list = document.getElementById('helpers-list');
+      list.innerHTML = '<p class="text-red-500 p-3 text-center">Failed to load directory.</p>';
+    });
+  }
+
+  // ---------- Search & render ----------
+  window.searchHelpers = function(){
+  const p = (document.getElementById('search-profession').value || '').toLowerCase();
+  const l = (document.getElementById('search-location').value || '').toLowerCase();
+  const list = document.getElementById('helpers-list');
+  list.innerHTML = '';
+
+  let filtered = allHelpers.filter(h =>
+  (!p || (h.profession || '').toLowerCase().includes(p)) &&
+  (!l || (h.location || '').toLowerCase().includes(l))
+);
+
+// Sorting: highest rating first → lowest cost → newest
+filtered.sort((a, b) => {
+
+  // 1️⃣ Sort by highest rating
+  const rA = a.rating || 0;
+  const rB = b.rating || 0;
+  if (rB !== rA) return rB - rA;
+
+  // 2️⃣ If rating is same → sort by lowest cost
+  const cA = (a.cost !== undefined ? a.cost : Infinity);
+  const cB = (b.cost !== undefined ? b.cost : Infinity);
+  if (cA !== cB) return cA - cB;
+
+  // 3️⃣ If cost is same → sort by newest first
+  const tA = a.registeredAt?.toMillis?.() || 0;
+  const tB = b.registeredAt?.toMillis?.() || 0;
+  return tB - tA;
+});
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<p class="text-gray-500 text-center p-3">No helpers found.</p>';
+    return;
+  }
+
+  filtered.forEach(h => {
+    const rating = h.rating || 0;
+    const count = h.ratingCount || 0;
+    const costLabel = (h.cost || h.cost === 0)
+      ? `₹${h.cost} / day`
+      : 'Cost not specified';
+
+    const container = document.createElement('div');
+    container.className = 'helper-item p-4 border border-gray-200 rounded-lg shadow-sm flex justify-between items-start';
+
+    const regDate = h.registeredAt ? new Date(h.registeredAt.toMillis()).toLocaleDateString() : 'N/A';
+
+    const left = document.createElement('div');
+    left.innerHTML = `
+      <p class="text-lg font-semibold text-blue-800">${escapeHtml(h.name || 'Unnamed')}</p>
+      <p class="text-gray-600 mt-1">
+        ${escapeHtml(h.profession || '')} —
+        <span class="font-medium">${escapeHtml(h.location || '')}</span>
+      </p>
+      <p class="text-sm text-gray-500 mt-1">${escapeHtml(h.contact || '')}</p>
+      <p class="text-sm text-emerald-600 mt-1 font-medium">${escapeHtml(costLabel)}</p>
+      <div class="mt-2 flex items-center space-x-3">
+        <div class="text-yellow-500">${renderStars(rating)}</div>
+        <div class="text-sm text-gray-600">
+          ${rating>0 ? rating.toFixed(1) : '—'}
+          <span class="text-xs text-gray-400">(${count} votes)</span>
+        </div>
+      </div>
+    `;
+
+    const right = document.createElement('div');
+    right.className = 'flex flex-col items-end space-y-2';
+    right.innerHTML = `
+      <p class="text-xs text-gray-400">Registered: ${escapeHtml(regDate)}</p>
+      <div class="flex gap-2">
+        <button class="rate-btn bg-yellow-500 text-white py-1 px-3 rounded-lg hover:bg-yellow-600">Rate</button>
+        <button class="fb-btn bg-gray-200 text-gray-700 py-1 px-3 rounded-lg hover:bg-gray-300">Feedback</button>
+      </div>
+    `;
+
+    right.querySelector('.rate-btn').addEventListener('click', () => openRatingModal(h.id, h.name));
+    right.querySelector('.fb-btn').addEventListener('click', () => openFeedbackModal(h.id, h.name));
+
+    container.appendChild(left);
+    container.appendChild(right);
+    list.appendChild(container);
+  });
+};
+
+
+  function renderStars(rating){
+    const full = Math.round(rating);
+    let s = '';
+    for (let i=0;i<5;i++) s += i < full ? '★' : '☆';
+    return `<span style="letter-spacing:2px">${s}</span>`;
+  }
+
+  window.clearSearch = function(){
+    document.getElementById('search-profession').value = '';
+    document.getElementById('search-location').value = '';
+    searchHelpers();
+  };
+
+  // ---------- Rating modal ----------
+  function openRatingModal(helperId, helperName='') {
+    document.getElementById('modal-helper-id').value = helperId;
+    document.getElementById('rating-modal-title').textContent = `Rate ${helperName || 'Helper'}`;
+    document.getElementById('rating-input').value = 5;
+    document.getElementById('feedback-input').value = '';
+    document.getElementById('rating-message').textContent = '';
+    document.getElementById('rating-modal').classList.remove('hidden');
+  }
+  window.openRatingModal = openRatingModal;
+
+  function closeRatingModal(){ document.getElementById('rating-modal').classList.add('hidden'); }
+  window.closeRatingModal = closeRatingModal;
+
+  document.getElementById('rating-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const helperId = document.getElementById('modal-helper-id').value;
+    const ratingVal = parseInt(document.getElementById('rating-input').value, 10);
+    const feedbackText = document.getElementById('feedback-input').value.trim();
+    const msg = document.getElementById('rating-message');
+
+    if (!helperId || !ratingVal || ratingVal<1 || ratingVal>5) {
+      msg.textContent = "Invalid rating.";
+      msg.className = "text-red-600";
+      return;
+    }
+
+    try {
+      // write feedback doc if there is text
+      if (feedbackText) {
+        const fbPath = `/artifacts/${appId}/public/data/helpers/${helperId}/feedbacks`;
+        await addDoc(collection(db, fbPath), {
+          userId: userId || null,
+          rating: ratingVal,
+          feedback: feedbackText,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      // update rating average on helper
+      const helper = allHelpers.find(h => h.id === helperId);
+      const currentRating = helper?.rating || 0;
+      const currentCount = helper?.ratingCount || 0;
+      const newCount = currentCount + 1;
+      const newAvg = ((currentRating * currentCount) + ratingVal) / newCount;
+
+      const helperRef = doc(db, `/artifacts/${appId}/public/data/helpers`, helperId);
+      await updateDoc(helperRef, { rating: newAvg, ratingCount: newCount });
+
+      msg.textContent = "Thanks! Rating submitted.";
+      msg.className = "text-green-600";
+      setTimeout(() => closeRatingModal(), 1000);
+    } catch (err) {
+      console.error("Rating error:", err);
+      msg.textContent = "Failed to submit rating.";
+      msg.className = "text-red-600";
+    }
+  });
+
+  // ---------- Feedback modal ----------
+  async function openFeedbackModal(helperId, helperName='') {
+    const modal = document.getElementById('feedback-modal');
+    const title = document.getElementById('feedback-modal-title');
+    const list = document.getElementById('feedback-list');
+
+    title.textContent = `Feedback for ${helperName || 'Helper'}`;
+    list.innerHTML = '<p class="text-gray-500 text-center">Loading feedback...</p>';
+    modal.classList.remove('hidden');
+
+    try {
+      const fbPath = `/artifacts/${appId}/public/data/helpers/${helperId}/feedbacks`;
+      const fbRef = collection(db, fbPath);
+      const q = query(fbRef, orderBy('createdAt','desc'));
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        list.innerHTML = '<p class="text-gray-500 text-center">No feedback yet.</p>';
+      } else {
+        list.innerHTML = '';
+        snap.forEach(docSnap => {
+          const d = docSnap.data();
+          const dateStr = d.createdAt ? new Date(d.createdAt.toMillis()).toLocaleString() : '';
+          const item = document.createElement('div');
+          item.className = 'p-3 border border-gray-200 rounded-lg bg-gray-50';
+          item.innerHTML = `
+            <div class="flex justify-between items-center">
+              <span class="font-semibold text-yellow-600">${d.rating || '-'}★</span>
+              <span class="text-xs text-gray-400">${escapeHtml(dateStr)}</span>
+            </div>
+            <p class="mt-1 text-sm text-gray-700">${escapeHtml(d.feedback || '')}</p>
+          `;
+          list.appendChild(item);
+        });
+      }
+    } catch (err) {
+      console.error("Load feedback error:", err);
+      list.innerHTML = '<p class="text-red-500 text-center">Failed to load feedback.</p>';
+    }
+  }
+  window.openFeedbackModal = openFeedbackModal;
+
+  function closeFeedbackModal(){ document.getElementById('feedback-modal').classList.add('hidden'); }
+  window.closeFeedbackModal = closeFeedbackModal;
+
+  // ---------- Start ----------
+  window.onload = () => {
+    switchView('register'); // default tab
+  };
+</script>
+</body>
+</html>
